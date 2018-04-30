@@ -1,4 +1,4 @@
-import Store, { IGame } from '../store/index';
+import Store, { IGame, pubsub } from '../store/index';
 const store = new Store();
 
 export const GameSchema = [`
@@ -39,6 +39,11 @@ export const GameResolver = {
         return null;
       }
       return store.getAuthorizedGame(args.id, context.sessionId);
+    },
+  },
+  RootSubscription: {
+    gameChanged: {
+      subscribe: () => pubsub.asyncIterator('gameChanged'),
     },
   },
 };

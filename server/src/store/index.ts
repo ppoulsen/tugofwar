@@ -1,5 +1,8 @@
+import { PubSub } from 'graphql-subscriptions';
 import LRU = require('lru-cache');
 import uuidv4 = require('uuid/v4');
+
+export const pubsub = new PubSub();
 
 export interface IGame {
   currentString: string;
@@ -47,7 +50,7 @@ export default class Store {
       sessionId2,
     };
     gameStore.prune();
-    gameStore.set(newGame.gameId, newGame);
+    this.write(newGame.gameId, newGame);
 
     queuedSessionId = null;
     queuedString = null;
@@ -91,7 +94,7 @@ export default class Store {
       game.winner = isPlayer2 ? 2 : 1;
     }
 
-    gameStore.set(game.gameId, game);
+    this.write(game.gameId, game);
     return game;
   }
 
@@ -102,5 +105,10 @@ export default class Store {
       return null;
     }
     return game;
+  }
+
+  private write(key: string, game: IGame) {
+    gameStore.set(key, game);
+    pubsub.publish('gameChanged', { gameChanged: game });
   }
 }

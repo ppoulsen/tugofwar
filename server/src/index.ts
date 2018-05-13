@@ -10,11 +10,11 @@ import uuidv4 = require('uuid/v4');
 import schema from './schema';
 
 // The GraphQL schema in string form
-const PORT = 3000;
+const PORT = 5000;
 
 const app = express();
 
-app.use('*', cors({ origin: `http://localhost:${PORT}` }));
+app.use('*', cors({ origin: `http://localhost:3000`, credentials: true }));
 
 // passport's session piggy-backs on express-session
 app.use(session({
@@ -32,8 +32,13 @@ app.use('/graphql', bodyParser.json(), graphqlExpress(request => ({
 })));
 app.get('/graphiql', graphiqlExpress({
   endpointURL: '/graphql',
-  subscriptionsEndpoint: `ws://localhost:3000/subscriptions`,
+  subscriptionsEndpoint: `ws://localhost:${PORT}/subscriptions`,
 })); // if you want GraphiQL enabled
+
+// Express only serves static assets in production
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static("./client/build", { fallthrough: true }));
+}
 
 // Wrap the Express server
 const ws = createServer(app);

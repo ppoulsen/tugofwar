@@ -4,17 +4,23 @@ import uuidv4 = require('uuid/v4');
 
 export const pubsub = new PubSub();
 
+enum GameState {
+  Queued = 'Queued',
+  InProgress = 'InProgress',
+  Complete = 'Complete',
+};
+
 export interface IGame {
   currentString: string;
   gameId: string;
+  gameState: GameState;
   initialString1: string;
-  initialString2: string;
-  isComplete: boolean;
+  initialString2: string | null;
   isoStartTime: string;
   isoEndTime?: string | void;
   position: number;
   sessionId1: string;
-  sessionId2: string;
+  sessionId2: string | null;
   winner?: 1 | 2 | void;
 };
 
@@ -23,45 +29,48 @@ const options = {
   stale: true, // No reason not to
 };
 const gameStore = LRU(options);
-let queuedSessionId: string | null = null;
-let queuedString: string | null = null;
+let queuedGame: IGame | null = null;
 
 function reverseString(input: string): string {
   return input.split('').reverse().join('');
 }
 
 export default class Store {
-  public createGameOrQueue(sessionId2: string, initialString2: string): IGame | false {
-    if (!queuedSessionId || !queuedString || queuedSessionId === sessionId2) {
-      queuedSessionId = sessionId2;
-      queuedString = initialString2;
-      return false; 
+  public createOrJoinGame(sessionId2: string, initialString2: string): IGame | false {
+    if (!queuedGame || queuedGame.sessionId1 === sessionId2) {
+      queuedGame = {
+        currentString: initialString2,
+        gameId: uuidv4(),
+        gameState: GameState.Queued,
+        initialString1: initialString2,
+        initialString2: null,
+        isoStartTime: new Date().toISOString(),
+        position: initialString2.length,
+        sessionId1: sessionId2,
+        sessionId2: null,
+      };
+      return queuedGame;
     }
 
     const newGame: IGame = {
-      currentString: queuedString + reverseString(initialString2),
-      gameId: uuidv4(),
-      initialString1: queuedString,
+      ...queuedGame,
+      currentString: queuedGame.initialString1 + reverseString(initialString2),
+      gameState: GameState.InProgress,
       initialString2,
-      isComplete: false,
       isoStartTime: new Date().toISOString(),
-      position: queuedString.length,
-      sessionId1: queuedSessionId,
       sessionId2,
     };
     gameStore.prune();
     this.write(newGame.gameId, newGame);
 
-    queuedSessionId = null;
-    queuedString = null;
+    queuedGame = null;
 
     return newGame;
   }
 
   public removeFromQueue(sessionId: string): void {
-    if (queuedSessionId === sessionId) {
-      queuedSessionId = null;
-      queuedString = null;
+    if (queuedGame && queuedGame.sessionId1 === sessionId) {
+      queuedGame = null;
     }
   }
 
@@ -71,7 +80,7 @@ export default class Store {
     if (!game) {
       throw new Error(`No game found with gameId=${gameId}`);
     }
-    if (game.isComplete) {
+    if (game.gameState === GameState.Complete) {
       return game;
     }
 
@@ -89,7 +98,7 @@ export default class Store {
 
     game.position = isPlayer2 ? game.position - 1 : game.position + 1;
     if (game.position === 0 || game.position === game.currentString.length) {
-      game.isComplete = true;
+      game.gameState = GameState.Complete;
       game.isoEndTime = new Date().toISOString();
       game.winner = isPlayer2 ? 2 : 1;
     }

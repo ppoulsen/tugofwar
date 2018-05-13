@@ -6,13 +6,13 @@ type Game {
   currentString: String!
   gameId: String!
   initialString1: String!
-  initialString2: String!
-  isComplete: Boolean!
+  initialString2: String
+  gameState: String!
   isoStartTime: String!
   isoEndTime: String
   position: Int!
   sessionId1: String!
-  sessionId2: String!
+  sessionId2: String
   winner: Int
 }
 `];
@@ -23,7 +23,7 @@ export const GameResolver = {
       if (!context.sessionId) {
         throw new Error('No access');
       }
-      const result = store.createGameOrQueue(context.sessionId, args.initialString);
+      const result = store.createOrJoinGame(context.sessionId, args.initialString);
       return result ? result : null;
     },
     tryCharacter(obj: {}, args: { gameId: string, character: string }, context: { sessionId: string | void }): IGame {

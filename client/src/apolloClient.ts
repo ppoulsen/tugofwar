@@ -6,6 +6,13 @@ import { HttpLink } from 'apollo-link-http';
 import { WebSocketLink } from 'apollo-link-ws';
 import { getMainDefinition } from 'apollo-utilities';
 
+import { getStateLink } from './state';
+
+// Cache
+const cache = new InMemoryCache();
+
+// Get the state link
+const stateLink = getStateLink(cache);
 
 // Create an http link:
 const httpLink = new HttpLink({
@@ -58,8 +65,10 @@ const client = new ApolloClient({
           /* tslint:enable no-console */
       }
     }),
+    stateLink,
     link,
   ]),
 });
 
+client.initQueryManager();
 export default client;

@@ -49,6 +49,7 @@ export default class Store {
         sessionId1: sessionId2,
         sessionId2: null,
       };
+      this.write(queuedGame.gameId, queuedGame);
       return queuedGame;
     }
 

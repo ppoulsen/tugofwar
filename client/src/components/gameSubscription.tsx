@@ -3,6 +3,10 @@ import * as React from 'react';
 import { GraphqlQueryControls, Query } from "react-apollo";
 
 import GameFragment from '../fragments/GameFragment';
+import { GameState } from '../shared/enums/gameState';
+
+import LiveGame from './liveGame';
+import Queued from './pure/queue';
 
 const CURRENT_GAME_ID_QUERY = gql`
   query currentGameId {
@@ -47,7 +51,7 @@ export default class GameSubscription extends React.Component {
           const gameId: string | null = currentData.currentGameId;
 
           if (!gameId) {
-            return <div>None</div>;
+            return <div>Submit Text to Enter Queue</div>;
           }
 
           return (
@@ -63,7 +67,20 @@ export default class GameSubscription extends React.Component {
                   return `Error! ${error.message}`;
                 }
                 this.subscribeOnce(subscribeToMore, gameId);
-                return <div>{JSON.stringify(data)}</div>;
+
+                const game = data.game;
+                if (game.gameState === GameState.Queued) {
+                  return <Queued />;
+                }
+
+                return (
+                  <LiveGame
+                    currentGameId={game.gameId}
+                    currentString={game.currentString}
+                    position={game.position}
+                    playerNumber={1}
+                  />
+                );
               }}
             </Query>
           );
